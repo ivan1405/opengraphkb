@@ -1,0 +1,421 @@
+{
+  "info": {
+    "name": "OpenGraphKB",
+    "description": "OpenGraphKB — Vendor-agnostic knowledge base combining Neo4j (graph) and Qdrant (vector) for RAG, GraphRAG, and Hybrid retrieval.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "doc_id",
+      "value": "test_document",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Returns service health including Neo4j and Qdrant connectivity."
+          }
+        },
+        {
+          "name": "Detailed Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health/detailed",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health", "detailed"]
+            },
+            "description": "Returns detailed stats from Neo4j and Qdrant."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Ingest Document (single)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "The file to ingest (PDF, DOCX, MD, TXT)."
+                },
+                {
+                  "key": "doc_id",
+                  "value": "{{doc_id}}",
+                  "type": "text",
+                  "description": "Optional document ID. UUID generated if omitted."
+                },
+                {
+                  "key": "title",
+                  "value": "My Test Document",
+                  "type": "text",
+                  "description": "Document title. Defaults to filename."
+                },
+                {
+                  "key": "source_type",
+                  "value": "article",
+                  "type": "text",
+                  "description": "Source type label."
+                },
+                {
+                  "key": "company",
+                  "value": "",
+                  "type": "text",
+                  "description": "Associated company.",
+                  "disabled": true
+                },
+                {
+                  "key": "speaker",
+                  "value": "",
+                  "type": "text",
+                  "description": "Primary speaker or author.",
+                  "disabled": true
+                },
+                {
+                  "key": "topics",
+                  "value": "AI",
+                  "type": "text",
+                  "description": "Topic labels (repeat for multiple).",
+                  "disabled": true
+                },
+                {
+                  "key": "summary",
+                  "value": "",
+                  "type": "text",
+                  "description": "Optional precomputed summary.",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/documents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents"]
+            },
+            "description": "Upload a single document and trigger background ingestion pipeline (parse → chunk → embed → Qdrant + Neo4j)."
+          }
+        },
+        {
+          "name": "Batch Ingest Documents",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": "",
+                  "description": "First file to ingest."
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": "",
+                  "description": "Second file to ingest (add more 'files' entries for more)."
+                },
+                {
+                  "key": "source_type",
+                  "value": "article",
+                  "type": "text",
+                  "description": "Source type applied to all files.",
+                  "disabled": true
+                },
+                {
+                  "key": "company",
+                  "value": "",
+                  "type": "text",
+                  "description": "Company applied to all files.",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/documents/batch",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "batch"]
+            },
+            "description": "Upload multiple files for ingestion in a single request. Each file is queued for background processing."
+          }
+        },
+        {
+          "name": "List Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents"]
+            },
+            "description": "Returns all stored document metadata records."
+          }
+        },
+        {
+          "name": "Get Document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{doc_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{doc_id}}"]
+            },
+            "description": "Returns the full metadata record for a single document."
+          }
+        },
+        {
+          "name": "Get Document Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{doc_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{doc_id}}", "status"]
+            },
+            "description": "Returns the current processing status (RAG + graph) for a document."
+          }
+        },
+        {
+          "name": "Reprocess Document (full)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{doc_id}}/reprocess",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{doc_id}}", "reprocess"]
+            },
+            "description": "Deletes existing indexed data and re-runs the full pipeline (Qdrant + Neo4j)."
+          }
+        },
+        {
+          "name": "Reprocess Document (graph only)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{doc_id}}/reprocess/graph",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{doc_id}}", "reprocess", "graph"]
+            },
+            "description": "Re-runs only the graph extraction pipeline using stored normalized text. Document must be fully processed first."
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{doc_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{doc_id}}"]
+            },
+            "description": "Deletes a document from all stores (filesystem, Qdrant, Neo4j)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Unified Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queries\": [\"What are the latest AI developments?\"],\n  \"retrieval_profile\": \"rag\",\n  \"top_k\": 5,\n  \"debug\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/search",
+              "host": ["{{base_url}}"],
+              "path": ["api", "search"]
+            },
+            "description": "Unified search endpoint. Set retrieval_profile to 'rag', 'graph_rag', or 'hybrid'."
+          }
+        },
+        {
+          "name": "RAG Search (vector only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queries\": [\"revenue growth trends\"],\n  \"top_k\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/search/rag",
+              "host": ["{{base_url}}"],
+              "path": ["api", "search", "rag"]
+            },
+            "description": "Pure vector similarity search through Qdrant."
+          }
+        },
+        {
+          "name": "GraphRAG Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queries\": [\"How is OpenAI connected to AI safety?\"],\n  \"top_k\": 5,\n  \"graph_options\": {\n    \"depth\": 2,\n    \"include_relationships\": true\n  },\n  \"debug\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/search/graph-rag",
+              "host": ["{{base_url}}"],
+              "path": ["api", "search", "graph-rag"]
+            },
+            "description": "Vector search enriched with graph entity matching and metadata."
+          }
+        },
+        {
+          "name": "Hybrid Search (full)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queries\": [\"What are the connections between AI companies?\"],\n  \"top_k\": 10,\n  \"graph_options\": {\n    \"depth\": 2,\n    \"max_expanded_chunks\": 6,\n    \"include_relationships\": true\n  },\n  \"debug\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/search/hybrid",
+              "host": ["{{base_url}}"],
+              "path": ["api", "search", "hybrid"]
+            },
+            "description": "Full graph-aware retrieval with vector search + graph expansion + reranking."
+          }
+        },
+        {
+          "name": "Search with Filters",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"queries\": [\"machine learning applications\"],\n  \"retrieval_profile\": \"hybrid\",\n  \"top_k\": 5,\n  \"filters\": {\n    \"source_types\": [\"article\"],\n    \"companies\": [\"Acme Corp\"],\n    \"topics\": [\"AI\", \"ML\"]\n  },\n  \"debug\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/search",
+              "host": ["{{base_url}}"],
+              "path": ["api", "search"]
+            },
+            "description": "Search with payload filters (source type, company, topics)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Graph",
+      "item": [
+        {
+          "name": "Graph Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/graph/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "graph", "stats"]
+            },
+            "description": "Returns node and relationship counts grouped by label and type."
+          }
+        },
+        {
+          "name": "List Entities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/graph/entities",
+              "host": ["{{base_url}}"],
+              "path": ["api", "graph", "entities"]
+            },
+            "description": "Returns all entity nodes in the graph."
+          }
+        },
+        {
+          "name": "List Graph Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/graph/documents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "graph", "documents"]
+            },
+            "description": "Returns document nodes with entity and chunk counts."
+          }
+        },
+        {
+          "name": "Graph Document Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/graph/documents/{{doc_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "graph", "documents", "{{doc_id}}"]
+            },
+            "description": "Returns detailed graph information for a single document (entities, chunk count)."
+          }
+        }
+      ]
+    }
+  ]
+}
