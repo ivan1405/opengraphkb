@@ -217,6 +217,7 @@ class QueryResult(BaseModel):
     total: int = Field(description="Number of returned hits.")
     graph: GraphResult | None = Field(default=None, description="Graph retrieval result.")
     debug: SearchDebug | None = Field(default=None, description="Debug metadata.")
+    answer: str | None = Field(default=None, description="Natively synthesized LLM answer.")
 
 
 class SearchResponse(BaseModel):
