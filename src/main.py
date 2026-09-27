@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # ── Wire up API routes ────────────────────────────────────────────────
     init_health(neo4j, qdrant, config.storage_base_path)
     init_documents(storage, pipeline, neo4j, qdrant, config.enable_graph_extraction)
-    init_search(search)
+    init_search(search, llm)
     init_graph(neo4j)
 
     log.info("ready", app_name=config.app_name)

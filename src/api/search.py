@@ -3,6 +3,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body
 
+from llm.base import LLMProvider
+
 from core.logging import get_logger
 from models.schemas import (
     RetrievalProfile,
@@ -16,12 +18,19 @@ log = get_logger("search_api")
 router = APIRouter(prefix="/search", tags=["search"])
 
 _search: SearchService | None = None
+_llm: LLMProvider | None = None
 
 
-def init_search(search: SearchService) -> None:
-    """Wire up the search service. Called during app startup."""
-    global _search
+def init_search(search: SearchService, llm: LLMProvider) -> None:
+    global _search, _llm
     _search = search
+    _llm = llm
+
+
+def _get_llm() -> LLMProvider:
+    if _llm is None:
+        raise RuntimeError("LLM provider not initialized")
+    return _llm
 
 
 def _get_search() -> SearchService:
@@ -131,6 +140,8 @@ async def search_rag(request: Annotated[SearchRequest, Body()]) -> SearchRespons
 )
 async def search_graph_rag(request: Annotated[SearchRequest, Body()]) -> SearchResponse:
     search_svc = _get_search()
+    llm = _get_llm()
+
     results = await asyncio.gather(
         *(
             search_svc.search(
@@ -144,7 +155,46 @@ async def search_graph_rag(request: Annotated[SearchRequest, Body()]) -> SearchR
             for query in request.queries
         )
     )
-    return SearchResponse(results=list(results), total_queries=len(results))
+
+    for result in results:
+        chunks = [item.content for item in result.items]
+        relationships = (
+            result.graph.sample_relationships if result.graph else []
+        )
+        context_prompt = (
+            "--- TEXT CONTEXT ---\n"
+            f"{chr(10).join(chunks)}\n\n"
+            "--- KNOWLEDGE GRAPH RELATIONSHIPS ---\n"
+            f"{chr(10).join(relationships)}"
+        )
+
+        try:
+            result.answer = await llm.chat(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an advanced GraphRAG assistant. Answer "
+                            "accurately using only the provided text context "
+                            "and knowledge graph relationships."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Context data:\n{context_prompt}\n\n"
+                            f"Question: {result.query}"
+                        ),
+                    },
+                ]
+            )
+        except Exception as exc:
+            log.error("Failed to generate LLM answer", error=str(exc))
+            result.answer = (
+                "An error occurred while compiling the final text summary."
+            )
+
+    return SearchResponse(results=results, total_queries=len(results))
 
 
 @router.post(
